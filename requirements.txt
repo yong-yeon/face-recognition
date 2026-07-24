@@ -9,5 +9,5 @@ selenium==4.41.0
 beautifulsoup4
 requests
 tqdm
-gradio
+streamlit
 huggingface_hub
