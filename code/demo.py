@@ -27,6 +27,7 @@ from config import HF_CACHE_DIR, HF_CLASSES_FILENAME, HF_MODEL_FILENAME, HF_REPO
 from model import MultiTaskResNet
 
 EMOTION_NAMES = ["무표정", "미소"]
+EMOTION_EMOJI = {"무표정": "😐", "미소": "😊"}
 IMAGE_SIZE = (224, 224)
 
 TRANSFORM = transforms.Compose([
@@ -66,28 +67,61 @@ def predict(image, model, class_names, device):
     return celeb_result, smile_result
 
 
+def render_ranking(result):
+    for name, prob in sorted(result.items(), key=lambda x: x[1], reverse=True):
+        st.write(f"{name} — {prob:.1%}")
+        st.progress(prob)
+
+
 def main():
-    st.title("연예인 인물 식별 + 미소 감지")
-    st.write("ResNet18 기반 멀티태스크 모델로 얼굴 사진에서 인물과 표정을 함께 예측합니다.")
+    st.set_page_config(
+        page_title="연예인 인물 식별 + 미소 감지",
+        page_icon="🎭",
+        layout="centered",
+    )
+
+    st.title("🎭 연예인 인물 식별 + 미소 감지")
+    st.markdown(
+        "ResNet18 기반 **멀티태스크 딥러닝 모델**로 얼굴 사진 한 장에서 "
+        "**인물**과 **표정**을 동시에 예측하는 프로젝트입니다.\n\n"
+        "얼굴이 잘 나온 사진을 업로드하면, 학습된 모델이 인물 예측 확률과 "
+        "미소/무표정 확률을 함께 보여줍니다."
+    )
+    st.divider()
 
     model, class_names, device = load_model()
 
     uploaded_file = st.file_uploader("얼굴 사진 업로드", type=["jpg", "jpeg", "png"])
     if uploaded_file is None:
+        st.info("사진을 업로드하면 예측 결과가 여기에 표시됩니다.")
         return
 
     image = Image.open(uploaded_file)
-    st.image(image, caption="업로드한 이미지", use_container_width=True)
+
+    col_img, col_result = st.columns([1, 1])
+    with col_img:
+        st.image(image, caption="업로드한 이미지", use_container_width=True)
 
     celeb_result, smile_result = predict(image, model, class_names, device)
+    top_celeb_name, top_celeb_prob = max(celeb_result.items(), key=lambda x: x[1])
+    top_emotion_name, top_emotion_prob = max(smile_result.items(), key=lambda x: x[1])
 
-    st.write("### 인물 예측")
-    for name, prob in sorted(celeb_result.items(), key=lambda x: x[1], reverse=True):
-        st.write(f"{name}: {prob:.2%}")
+    with col_result:
+        st.metric("👤 예측 인물", top_celeb_name, f"확신도 {top_celeb_prob:.1%}", delta_color="off")
+        st.metric(
+            f"{EMOTION_EMOJI[top_emotion_name]} 예측 표정",
+            top_emotion_name,
+            f"확신도 {top_emotion_prob:.1%}",
+            delta_color="off",
+        )
 
-    st.write("### 표정 예측")
-    for name, prob in sorted(smile_result.items(), key=lambda x: x[1], reverse=True):
-        st.write(f"{name}: {prob:.2%}")
+    st.divider()
+
+    tab_celeb, tab_emotion = st.tabs(["📋 인물 예측 전체 순위", "📋 표정 예측 전체 순위"])
+    with tab_celeb:
+        render_ranking(celeb_result)
+    with tab_emotion:
+        render_ranking(smile_result)
 
 
 if __name__ == "__main__":
