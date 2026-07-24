@@ -1,0 +1,15 @@
+torch==2.11.0
+torchvision==0.26.0
+facenet-pytorch
+numpy
+pillow
+opencv-python==4.13.0.92
+scikit-learn
+matplotlib==3.10.6
+seaborn
+selenium==4.41.0
+beautifulsoup4
+requests
+tqdm
+gradio
+huggingface_hub
