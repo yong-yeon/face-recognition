@@ -4,6 +4,9 @@ demo.py
 학습된 멀티태스크 모델(best_model_*.pth)로, 업로드한 얼굴 사진에서
 연예인 이름과 표정(웃음/무표정)을 함께 예측해 보여주는 Gradio 데모.
 
+별도의 얼굴 검출 없이 업로드된 이미지 전체를 224x224로 리사이즈해 모델에 입력하므로,
+사용자가 얼굴이 나온 사진을 직접 업로드해야 한다.
+
 train.py가 체크포인트와 같이 저장한 classes_*.json(클래스 순서)을 그대로 불러와 사용하므로,
 학습에 쓰인 checkpoint/classes 파일 쌍이 함께 있어야 한다.
 """
@@ -12,13 +15,8 @@ import json
 import os
 import sys
 
-# 이 환경(Anaconda + torch)에서 facenet-pytorch/torch가 각자 다른 OpenMP 런타임(libiomp5md.dll)을
-# 중복 로드해 "OMP: Error #15"로 죽는 문제가 있어, 무거운 라이브러리를 import하기 전에 미리 완화해둔다.
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-
 import gradio as gr
 import torch
-from facenet_pytorch import MTCNN
 from huggingface_hub import hf_hub_download
 from torchvision import transforms
 
@@ -48,7 +46,7 @@ def infer_classes_path(model_path):
     return os.path.join(os.path.dirname(model_path), f"classes_{suffix}")
 
 
-def build_predict_fn(model, class_names, device, mtcnn):
+def build_predict_fn(model, class_names, device):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
@@ -60,23 +58,7 @@ def build_predict_fn(model, class_names, device, mtcnn):
             return {}, {}
 
         img = image.convert("RGB")
-        face_img = img
-
-        # 학습 데이터가 얼굴만 크롭된 이미지였으므로, 추론 전에도 동일하게 얼굴을 검출해 크롭한다.
-        # (preprocessing.py와 동일하게 25% 여백을 둠. 얼굴을 못 찾으면 원본 이미지를 그대로 사용)
-        boxes, _ = mtcnn.detect(img)
-        if boxes is not None:
-            box = boxes[0]
-            w, h = box[2] - box[0], box[3] - box[1]
-            pad_w, pad_h = w * 0.25, h * 0.25
-            img_w, img_h = img.size
-            nx1 = max(0, box[0] - pad_w)
-            ny1 = max(0, box[1] - pad_h)
-            nx2 = min(img_w, box[2] + pad_w)
-            ny2 = min(img_h, box[3] + pad_h)
-            face_img = img.crop((nx1, ny1, nx2, ny2))
-
-        tensor = transform(face_img).unsqueeze(0).to(device)
+        tensor = transform(img).unsqueeze(0).to(device)
 
         with torch.no_grad():
             c_out, s_out = model(tensor)
@@ -118,8 +100,7 @@ def main():
     model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     model.eval()
 
-    mtcnn = MTCNN(keep_all=False, select_largest=True, device="cpu")
-    predict = build_predict_fn(model, class_names, device, mtcnn)
+    predict = build_predict_fn(model, class_names, device)
 
     demo = gr.Interface(
         fn=predict,

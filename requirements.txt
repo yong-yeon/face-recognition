@@ -1,9 +1,7 @@
 torch==2.11.0
 torchvision==0.26.0
-facenet-pytorch
 numpy<2
 pillow
-opencv-python-headless==4.8.1.78
 scikit-learn
 matplotlib==3.10.6
 seaborn
