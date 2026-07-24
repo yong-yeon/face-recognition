@@ -10,6 +10,7 @@ train.py가 체크포인트와 같이 저장한 classes_*.json(클래스 순서)
 import argparse
 import json
 import os
+import sys
 
 # 이 환경(Anaconda + torch)에서 facenet-pytorch/torch가 각자 다른 OpenMP 런타임(libiomp5md.dll)을
 # 중복 로드해 "OMP: Error #15"로 죽는 문제가 있어, 무거운 라이브러리를 import하기 전에 미리 완화해둔다.
@@ -21,6 +22,9 @@ from facenet_pytorch import MTCNN
 from huggingface_hub import hf_hub_download
 from torchvision import transforms
 
+# cv2가 자체적으로 가진 config 모듈과 이름이 충돌하지 않도록, 이 파일이 있는 code/ 디렉터리를
+# sys.path 맨 앞에 넣어 로컬 config.py를 우선 찾도록 한다.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import HF_CACHE_DIR, HF_CLASSES_FILENAME, HF_MODEL_FILENAME, HF_REPO_ID
 from model import MultiTaskResNet
 
