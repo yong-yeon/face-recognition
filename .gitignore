@@ -18,10 +18,20 @@ code/ppt_confusion_matrix.png
 code/*.csv
 code/result_chart_*.png
 
+# 학습 시 생성되는 클래스 순서 파일 (classes_*.json 포함)
+code/*.json
+
 # 파이썬 캐시
 __pycache__/
 *.pyc
 
+# 캐시·개인 설정
+.vscode/
+.python-version
+
 # 가상환경
 .venv/
 venv/
+
+# 발표 자료 PDF는 docs/ResNet18_Portfolio.pdf만 공개
+!docs/ResNet18_Portfolio.pdf
